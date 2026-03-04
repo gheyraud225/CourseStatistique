@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Course Crypto — Format TikTok / YouTube Shorts / Instagram Reels
-# Usage : python generate.py configs/crypto_tiktok.yaml
+# Usage : python generate.py configs/crypto_tiktok.yaml --headless
 # ─────────────────────────────────────────────────────────────────────────────
 
 title: "Crypto Battle"
@@ -11,12 +11,13 @@ format: tiktok
 
 # ── Source des données ───────────────────────────────────────────────────────
 source:
-  type: crypto          # "crypto" ou "manual"
+  type: crypto                # Téléchargement automatique via Yahoo Finance
   start: "2018-01-01"
-  # end: "2024-12-31"  # Commenté = aujourd'hui
-  interval: "1wk"      # 1d, 1wk ou 1mo
+  # end: "2024-12-31"         # Commenté = jusqu'à aujourd'hui
+  interval: "1wk"             # 1d, 1wk ou 1mo
 
-  # Tickers Yahoo Finance → nom d'affichage (doit correspondre à assets/{nom}.png)
+  # Ticker Yahoo Finance → nom affiché (doit correspondre à assets/{nom}.png)
+  # Les logos sont téléchargés automatiquement depuis CoinGecko.
   tickers:
     BTC-USD:  Bitcoin
     ETH-USD:  Ethereum
@@ -25,15 +26,25 @@ source:
     SOL-USD:  Solana
     XRP-USD:  Ripple
 
+# ── Couleurs de marque (RGB) ─────────────────────────────────────────────────
+# Rend chaque barre immédiatement reconnaissable.
+colors:
+  Bitcoin:  [247, 147,  26]   # Orange Bitcoin
+  Ethereum: [ 98, 126, 234]   # Indigo Ethereum
+  Dogecoin: [195, 175,   0]   # Or Dogecoin
+  Binance:  [240, 185,  11]   # Jaune Binance
+  Solana:   [153,  69, 255]   # Violet Solana
+  Ripple:   [  0, 170, 228]   # Bleu ciel Ripple
+
 # ── Affichage ────────────────────────────────────────────────────────────────
 display:
-  bars: 6             # Nombre de barres visibles simultanément
+  bars: 6               # Nombre de barres visibles simultanément
   font_size: 28
-  time_format: month  # year | month | day
+  time_format: month    # year | month | day
   unit: "$"
 
 # ── Sortie vidéo ─────────────────────────────────────────────────────────────
 output:
   file: "output/crypto_tiktok.mp4"
   fps: 30
-  duration: 60        # secondes
+  duration: 60          # secondes
