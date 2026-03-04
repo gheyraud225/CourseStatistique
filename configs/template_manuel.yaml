@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Template — Source manuelle (fichier Excel fourni par l'utilisateur)
+# Usage : python generate.py configs/template_manuel.yaml
+#
+# Format du fichier Excel attendu :
+#   - Colonne A (index) : dates au format YYYY-MM-DD
+#   - Colonnes B, C… : un participant par colonne, avec son nom en en-tête
+#
+# Exemple :
+#   Date        | YouTube | TikTok | Instagram
+#   2020-01-01  | 500     | 100    | 800
+#   2021-01-01  | 1200    | 2500   | 1800
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Course aux Abonnés"
+subtitle: "Réseaux sociaux · 2020 → 2024"
+
+format: tiktok
+
+# ── Source des données ───────────────────────────────────────────────────────
+source:
+  type: manual
+  file: "data/abonnes.xlsx"   # Chemin vers votre fichier Excel
+
+# ── Affichage ────────────────────────────────────────────────────────────────
+display:
+  bars: 5
+  font_size: 28
+  time_format: year           # year | month | day
+  unit: "M"                   # Unité affichée après chaque valeur (optionnel)
+
+# ── Sortie vidéo ─────────────────────────────────────────────────────────────
+output:
+  file: "output/abonnes_tiktok.mp4"
+  fps: 30
+  duration: 45

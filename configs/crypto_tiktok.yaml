@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course Crypto — Format TikTok / YouTube Shorts / Instagram Reels
+# Usage : python generate.py configs/crypto_tiktok.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Crypto Battle"
+subtitle: "Prix en USD · 2018 → aujourd'hui"
+
+# Format de sortie : "tiktok" (1080×1920) ou "youtube" (1920×1080)
+format: tiktok
+
+# ── Source des données ───────────────────────────────────────────────────────
+source:
+  type: crypto          # "crypto" ou "manual"
+  start: "2018-01-01"
+  # end: "2024-12-31"  # Commenté = aujourd'hui
+  interval: "1wk"      # 1d, 1wk ou 1mo
+
+  # Tickers Yahoo Finance → nom d'affichage (doit correspondre à assets/{nom}.png)
+  tickers:
+    BTC-USD:  Bitcoin
+    ETH-USD:  Ethereum
+    DOGE-USD: Dogecoin
+    BNB-USD:  Binance
+    SOL-USD:  Solana
+    XRP-USD:  Ripple
+
+# ── Affichage ────────────────────────────────────────────────────────────────
+display:
+  bars: 6             # Nombre de barres visibles simultanément
+  font_size: 28
+  time_format: month  # year | month | day
+  unit: "$"
+
+# ── Sortie vidéo ─────────────────────────────────────────────────────────────
+output:
+  file: "output/crypto_tiktok.mp4"
+  fps: 30
+  duration: 60        # secondes

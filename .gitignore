@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Cache sjvisualizer
+_pandas_cache/
+
+# Données générées (re-générées à la demande)
+data/*.xlsx
+
+# Vidéos de sortie
+output/*.mp4
+
+# Environnements virtuels
+.venv/
+venv/
+env/
