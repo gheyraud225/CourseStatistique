@@ -17,8 +17,11 @@ Créer une nouvelle course :
 # ── Rendu headless via matplotlib Agg ────────────────────────────────────────
 # Ces lignes DOIVENT être en tout premier, avant tout import de matplotlib.pyplot.
 import matplotlib
-import imageio_ffmpeg
-matplotlib.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+try:
+    import imageio_ffmpeg
+    matplotlib.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+except Exception:
+    pass  # Utilise le ffmpeg système si imageio_ffmpeg n'est pas disponible
 matplotlib.use('Agg')    # Pas de fenêtre, pas de Xvfb, fonctionne partout
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -212,7 +215,7 @@ def build_video(config: dict, df: pd.DataFrame, preview: bool = False) -> None:
             "size": fmt["period_label_size"],
         },
         period_fmt=period_fmt,
-        bar_kwargs={"alpha": 0.88, "edgecolor": "none"},
+        bar_kwargs={"alpha": 0.88},
         steps_per_period=steps,
         filter_column_colors=True,
     )
