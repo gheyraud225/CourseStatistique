@@ -116,13 +116,18 @@ def download_logos_yfinance(tickers: dict, source_type: str = "crypto") -> None:
         return
 
     if source_type == "stocks":
-        print("Téléchargement des logos (Clearbit)...")
+        print("Téléchargement des logos (Google favicon)...")
         for ticker, name in needed:
             domain = COMPANY_DOMAINS.get(ticker.upper())
             if not domain:
                 print(f"  ✗ {ticker} : domaine inconnu — placez assets/{name}.png manuellement")
                 continue
-            _fetch_and_save(f"https://logo.clearbit.com/{domain}", name, LOGO_SIZE)
+            # Google favicon service (256px) — fonctionne sans clé API
+            url = f"https://www.google.com/s2/favicons?domain={domain}&sz=256"
+            ok = _fetch_and_save(url, name, LOGO_SIZE)
+            if not ok:
+                # Fallback : DuckDuckGo icons
+                _fetch_and_save(f"https://icons.duckduckgo.com/ip3/{domain}.ico", name, LOGO_SIZE)
     else:
         print("Téléchargement des logos crypto (CoinGecko)...")
         for ticker, name in needed:
