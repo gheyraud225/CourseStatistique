@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Course Crypto — Format YouTube (16:9)
-# Usage : python generate.py configs/crypto_youtube.yaml
+# Usage : python generate.py configs/crypto_youtube.yaml --headless
 # ─────────────────────────────────────────────────────────────────────────────
 
 title: "Crypto Battle 2018–2025"
@@ -22,10 +22,19 @@ source:
     SOL-USD:  Solana
     XRP-USD:  Ripple
 
+# ── Couleurs de marque (RGB) ─────────────────────────────────────────────────
+colors:
+  Bitcoin:  [247, 147,  26]
+  Ethereum: [ 98, 126, 234]
+  Dogecoin: [195, 175,   0]
+  Binance:  [240, 185,  11]
+  Solana:   [153,  69, 255]
+  Ripple:   [  0, 170, 228]
+
 # ── Affichage ────────────────────────────────────────────────────────────────
 display:
   bars: 6
-  font_size: 22
+  font_size: 24
   time_format: month
   unit: "$"
 
@@ -33,4 +42,4 @@ display:
 output:
   file: "output/crypto_youtube.mp4"
   fps: 30
-  duration: 90
+  duration: 60

@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course au PIB mondial — Format TikTok
+# Usage : python generate.py configs/pays_pib_tiktok.yaml --headless
+#
+# Données : World Bank (NY.GDP.MKTP.CD), annuelles, en billions de dollars.
+# Logos   : drapeaux téléchargés automatiquement depuis flagcdn.com.
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Course au PIB"
+subtitle: "PIB en billions $ · 2000 → 2024"
+
+format: tiktok
+
+# ── Source des données ───────────────────────────────────────────────────────
+source:
+  type: world_bank
+  indicator: NY.GDP.MKTP.CD    # PIB courant en USD
+  start_year: 2000
+  # end_year: 2024             # Commenté = l'an dernier
+  scale: 1.0e12                # Divise par 1 000 milliards → valeurs en T$
+
+  # Code ISO3 → nom affiché (= nom du drapeau dans assets/)
+  # Les drapeaux sont téléchargés automatiquement.
+  countries:
+    USA: États-Unis
+    CHN: Chine
+    DEU: Allemagne
+    JPN: Japon
+    IND: Inde
+    GBR: Royaume-Uni
+    FRA: France
+    ITA: Italie
+    BRA: Brésil
+    CAN: Canada
+
+# ── Couleurs (couleur principale du drapeau) ─────────────────────────────────
+colors:
+  États-Unis: [178,  34,  52]
+  Chine:      [222,  41,  16]
+  Allemagne:  [100, 100, 100]
+  Japon:      [200,   0,  40]
+  Inde:       [255, 153,  51]
+  Royaume-Uni: [  0,  36, 125]
+  France:     [  0,  35, 149]
+  Italie:     [  0, 146,  70]
+  Brésil:     [  0, 156,  59]
+  Canada:     [255,   0,   0]
+
+# ── Affichage ────────────────────────────────────────────────────────────────
+display:
+  bars: 10
+  font_size: 26
+  time_format: year       # Données annuelles
+  unit: " T$"             # Trillions de dollars
+
+# ── Sortie vidéo ─────────────────────────────────────────────────────────────
+output:
+  file: "output/pays_pib_tiktok.mp4"
+  fps: 30
+  duration: 60

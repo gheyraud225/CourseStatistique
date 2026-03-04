@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course à l'Armement — Format TikTok
+# Usage : python generate.py configs/pays_armement_tiktok.yaml --headless
+#
+# Données : World Bank (MS.MIL.XPND.CD), annuelles, en milliards de dollars.
+# Logos   : drapeaux téléchargés automatiquement depuis flagcdn.com.
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Course à l'Armement"
+subtitle: "Dépenses militaires en Md$ · 2000 → 2024"
+
+format: tiktok
+
+# ── Source des données ───────────────────────────────────────────────────────
+source:
+  type: world_bank
+  indicator: MS.MIL.XPND.CD   # Dépenses militaires (USD courant)
+  start_year: 2000
+  scale: 1.0e9                 # Divise par 1 milliard → valeurs en Md$
+
+  countries:
+    USA: États-Unis
+    CHN: Chine
+    RUS: Russie
+    GBR: Royaume-Uni
+    DEU: Allemagne
+    SAU: Arabie Saoudite
+    IND: Inde
+    FRA: France
+    JPN: Japon
+    KOR: Corée du Sud
+    AUS: Australie
+    ISR: Israël
+    ITA: Italie
+    UKR: Ukraine
+    POL: Pologne
+
+# ── Couleurs ─────────────────────────────────────────────────────────────────
+colors:
+  États-Unis:       [178,  34,  52]
+  Chine:            [222,  41,  16]
+  Russie:           [  0,  57, 166]
+  Royaume-Uni:      [  0,  36, 125]
+  Allemagne:        [100, 100, 100]
+  Arabie Saoudite:  [ 96, 171,  89]
+  Inde:             [255, 153,  51]
+  France:           [  0,  85, 164]
+  Japon:            [200,   0,  40]
+  Corée du Sud:     [  0,  71, 160]
+  Australie:        [  0,  70, 127]
+  Israël:           [  0,  56, 184]
+  Italie:           [  0, 146,  70]
+  Ukraine:          [  0,  87, 183]
+  Pologne:          [220,  20,  60]
+
+# ── Affichage ────────────────────────────────────────────────────────────────
+display:
+  bars: 10
+  font_size: 26
+  time_format: year
+  unit: " Md$"
+
+# ── Sortie vidéo ─────────────────────────────────────────────────────────────
+output:
+  file: "output/pays_armement_tiktok.mp4"
+  fps: 30
+  duration: 60
