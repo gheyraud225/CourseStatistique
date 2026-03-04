@@ -2,37 +2,37 @@
 Modules de récupération de données pour les différentes sources supportées.
 
 Sources disponibles :
-  - crypto      : Prix de clôture via Yahoo Finance (yfinance)
-  - world_bank  : Statistiques mondiales via l'API World Bank (sans clé)
-  - manual      : Données depuis un fichier Excel fourni par l'utilisateur
+  - crypto / stocks : Prix de clôture via Yahoo Finance (yfinance)
+  - world_bank       : Statistiques mondiales via l'API World Bank (sans clé)
+  - manual           : Données depuis un fichier Excel fourni par l'utilisateur
 
 Indicateurs World Bank utiles :
   NY.GDP.MKTP.CD    → PIB (USD courant)
   MS.MIL.XPND.CD    → Dépenses militaires (USD courant)
   SP.POP.TOTL       → Population totale
   NY.GDP.PCAP.CD    → PIB par habitant (USD courant)
-  EG.USE.PCAP.KG.OE → Consommation d'énergie par habitant
 """
 from __future__ import annotations
 
 import pandas as pd
 
 
-# ─── Crypto ──────────────────────────────────────────────────────────────────
+# ─── Yahoo Finance (crypto + actions) ────────────────────────────────────────
 
-def fetch_crypto(
+def fetch_yfinance(
     tickers: dict,
     start: str,
     end: str | None = None,
     interval: str = "1wk",
 ) -> pd.DataFrame:
     """
-    Télécharge les prix de clôture des cryptomonnaies depuis Yahoo Finance.
+    Télécharge les prix de clôture depuis Yahoo Finance.
+    Fonctionne pour les cryptomonnaies (BTC-USD) comme pour les actions (AAPL).
 
-    :param tickers:  dict {code_yahoo: nom_affichage}, ex. {"BTC-USD": "Bitcoin"}
+    :param tickers:  dict {symbole_yahoo: nom_affichage}, ex. {"BTC-USD": "Bitcoin"}
     :param start:    date de début "YYYY-MM-DD"
     :param end:      date de fin "YYYY-MM-DD" (None = aujourd'hui)
-    :param interval: intervalle : "1d", "1wk" ou "1mo"
+    :param interval: "1d", "1wk" ou "1mo"
     :return: DataFrame avec DatetimeIndex et noms d'affichage en colonnes
     """
     import yfinance as yf
@@ -42,7 +42,6 @@ def fetch_crypto(
 
     raw = yf.download(symbols, start=start, end=end, interval=interval, progress=False)
 
-    # Extraction de la colonne "Close" — gère les cas mono et multi-ticker
     if isinstance(raw.columns, pd.MultiIndex):
         close = raw.xs("Close", axis=1, level=0).copy()
     else:
@@ -53,8 +52,12 @@ def fetch_crypto(
     close.index = pd.to_datetime(close.index)
     close.index.name = "Date"
 
-    print(f"{len(close)} points de données récupérés.")
+    print(f"{len(close)} points récupérés.")
     return close
+
+
+# Alias rétro-compatible (les anciennes configs utilisaient fetch_crypto)
+fetch_crypto = fetch_yfinance
 
 
 # ─── World Bank ───────────────────────────────────────────────────────────────
@@ -73,7 +76,7 @@ def fetch_world_bank(
     :param countries:  dict {code_iso3: nom_affichage}, ex. {"USA": "États-Unis"}
     :param start_year: première année à récupérer
     :param end_year:   dernière année (None = l'an dernier)
-    :param scale:      diviseur appliqué aux valeurs (ex. 1e9 pour passer en milliards)
+    :param scale:      diviseur (ex. 1e9 pour passer de USD à milliards)
     :return: DataFrame avec DatetimeIndex annuel et pays en colonnes
     """
     import requests
@@ -82,9 +85,8 @@ def fetch_world_bank(
     end_year = end_year or (date.today().year - 1)
     country_codes = ";".join(countries.keys())
 
-    print(f"Téléchargement World Bank [{indicator}] pour {len(countries)} pays ({start_year}→{end_year})...")
+    print(f"World Bank [{indicator}] — {len(countries)} pays ({start_year}→{end_year})...")
 
-    # Récupération paginée
     all_records: list[dict] = []
     page = 1
     while True:
@@ -108,8 +110,8 @@ def fetch_world_bank(
                 iso3 = item.get("countryiso3code", "")
                 all_records.append({
                     "country": countries.get(iso3, iso3),
-                    "year": int(item["date"]),
-                    "value": float(item["value"]) / scale,
+                    "year":    int(item["date"]),
+                    "value":   float(item["value"]) / scale,
                 })
 
         if page >= data[0].get("pages", 1):
@@ -118,17 +120,16 @@ def fetch_world_bank(
 
     if not all_records:
         raise ValueError(
-            f"Aucune donnée retournée pour l'indicateur {indicator!r}.\n"
-            "Vérifiez le code indicateur sur https://data.worldbank.org/indicator"
+            f"Aucune donnée pour l'indicateur {indicator!r}.\n"
+            "Vérifiez le code sur https://data.worldbank.org/indicator"
         )
 
     df_raw = pd.DataFrame(all_records)
-    df_pivot = df_raw.pivot_table(index="year", columns="country", values="value", aggfunc="mean")
+    df_pivot = df_raw.pivot_table(
+        index="year", columns="country", values="value", aggfunc="mean"
+    )
     df_pivot.index = pd.to_datetime([f"{y}-01-01" for y in df_pivot.index])
-    df_pivot = df_pivot.sort_index()
-
-    # Forward-fill les années manquantes, puis 0 pour les pays sans historique
-    df_pivot = df_pivot.ffill().fillna(0)
+    df_pivot = df_pivot.sort_index().ffill().fillna(0)
     df_pivot.index.name = "Date"
 
     print(f"{len(df_pivot)} années × {len(df_pivot.columns)} pays récupérés.")

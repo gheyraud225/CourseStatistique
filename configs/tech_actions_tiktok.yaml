@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course Tech — Actions normalisées — Format TikTok
+# Usage : python generate.py configs/tech_actions_tiktok.yaml
+#
+# Performances relatives depuis 2019 (base 100).
+# NVIDIA explose à +3 000 % → dépasse Apple, Microsoft et Amazon.
+# Chute et rebond de Meta, folie Tesla en 2020-2021.
+# Course incroyablement dynamique !
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Tech Battle · Wall Street"
+subtitle: "Qui a le plus grandi depuis 2019 ? (base 100)"
+
+format: tiktok
+
+source:
+  type: stocks              # Utilise Yahoo Finance + logos Clearbit
+  start: "2019-01-01"
+  interval: "1mo"           # Mensuel — suffisant pour 5 ans
+
+  tickers:
+    NVDA:  NVIDIA
+    AAPL:  Apple
+    MSFT:  Microsoft
+    AMZN:  Amazon
+    META:  Meta
+    GOOGL: Alphabet
+    TSLA:  Tesla
+    NFLX:  Netflix
+
+colors:
+  NVIDIA:   [ 118, 185,   0]   # Vert NVIDIA
+  Apple:    [ 150, 150, 150]   # Gris Apple
+  Microsoft: [  0, 120, 212]   # Bleu Microsoft
+  Amazon:   [255, 153,   0]    # Orange Amazon
+  Meta:     [  0, 120, 215]    # Bleu Meta
+  Alphabet: [ 66, 133, 244]    # Bleu Google
+  Tesla:    [204,   0,   0]    # Rouge Tesla
+  Netflix:  [229,   9,  20]    # Rouge Netflix
+
+display:
+  bars: 8
+  font_size: 28
+  time_format: month
+  normalize: true           # Base 100 au démarrage
+
+output:
+  file: "output/tech_actions_tiktok.mp4"
+  fps: 30
+  duration: 60

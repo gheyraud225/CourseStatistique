@@ -1,117 +1,116 @@
 #!/usr/bin/env python3
 """
-Générateur de vidéos "Course" (Bar Chart Race) pour TikTok / YouTube Shorts / Instagram Reels.
+Générateur de vidéos "Course" (Bar Chart Race) — 100% headless, aucune fenêtre.
 
 Usage :
-    python generate.py configs/crypto_tiktok.yaml
-    python generate.py configs/crypto_tiktok.yaml --headless   # enregistre sans fenêtre visible
-    python generate.py configs/crypto_tiktok.yaml --preview     # fenêtre, pas d'enregistrement
+    python generate.py configs/crypto_performance_tiktok.yaml
+    python generate.py configs/pays_armement_tiktok.yaml
+    python generate.py configs/tech_actions_tiktok.yaml
+    python generate.py configs/crypto_tiktok.yaml --preview   # aperçu rapide
 
 Créer une nouvelle course :
-    1. Dupliquer configs/crypto_tiktok.yaml → configs/ma_course.yaml
-    2. Modifier title, subtitle, source.*, colors
-    3. Lancer : python generate.py configs/ma_course.yaml --headless
+    1. Dupliquer un fichier configs/*.yaml
+    2. Modifier title, subtitle, source, colors
+    3. Lancer python generate.py configs/ma_course.yaml
 """
 
-# ── Mode headless : relance le script via xvfb-run AVANT tout import graphique ──
-# Doit être en tout premier dans le fichier.
-import os
-import shutil
-import sys
-
-if "--headless" in sys.argv and "XVFB_ACTIVE" not in os.environ:
-    if shutil.which("xvfb-run"):
-        import subprocess
-        env = {**os.environ, "XVFB_ACTIVE": "1"}
-        # Retire --headless des args pour éviter la boucle infinie
-        args = [a for a in sys.argv[1:] if a != "--headless"]
-        result = subprocess.run(
-            ["xvfb-run", "--auto-servernum",
-             "--server-args=-screen 0 1920x1920x24",
-             sys.executable, __file__] + args,
-            env=env,
-        )
-        sys.exit(result.returncode)
-    else:
-        print(
-            "Avertissement : xvfb-run introuvable — la fenêtre sera visible.\n"
-            "Pour l'installer : sudo apt install xvfb"
-        )
+# ── Rendu headless via matplotlib Agg ────────────────────────────────────────
+# Ces lignes DOIVENT être en tout premier, avant tout import de matplotlib.pyplot.
+import matplotlib
+import imageio_ffmpeg
+matplotlib.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+matplotlib.use('Agg')    # Pas de fenêtre, pas de Xvfb, fonctionne partout
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse
+import os
+import sys
 
+import matplotlib.pyplot as plt
+import pandas as pd
 import yaml
 
-# ── Formats prédéfinis ────────────────────────────────────────────────────────
-# Thème sombre pour les deux formats (meilleur rendu TikTok/YouTube).
-# Modifiez "chart" pour ajuster la zone du graphique (x_pos, y_pos, width, height).
+# ── Palette par défaut (utilisée si une entité n'a pas de couleur dans le YAML) ──
+_DEFAULT_PALETTE = [
+    '#e63946', '#457b9d', '#2a9d8f', '#e9c46a', '#f4a261',
+    '#9b5de5', '#f15bb5', '#00bbf9', '#00f5d4', '#fb5607',
+    '#ff006e', '#8338ec', '#3a86ff', '#06d6a0', '#ffd166',
+    '#ef476f', '#118ab2', '#06d6a0', '#ffc8dd', '#cdb4db',
+]
+
+# ── Thème sombre global ───────────────────────────────────────────────────────
+_DARK_THEME = {
+    'figure.facecolor': '#0a0a0f',
+    'axes.facecolor':   '#0a0a0f',
+    'text.color':       'white',
+    'xtick.color':      '#888899',
+    'ytick.color':      'white',
+    'axes.labelcolor':  'white',
+    'grid.color':       '#1e1e2e',
+}
+
+# ── Formats de sortie ─────────────────────────────────────────────────────────
 FORMATS: dict = {
     "tiktok": {
-        "width": 1080,
-        "height": 1920,
-        "bg": (10, 10, 15),               # Noir quasi-pur
-        "text_color": (255, 255, 255),
-        "subtitle_color": (160, 160, 175),
-        "time_color": (255, 200, 50),      # Jaune vif pour le temps
-        "chart": {"width": 960, "height": 1200, "x_pos": 60, "y_pos": 380},
+        "figsize":           (5.625, 10.0),  # 1080×1920 @ 192 dpi
+        "dpi":               192,
+        "period_label_size": 32,
+        "bar_label_size":    11,
+        "tick_label_size":   11,
+        "title_size":        16,
     },
     "youtube": {
-        "width": 1920,
-        "height": 1080,
-        "bg": (10, 10, 15),
-        "text_color": (255, 255, 255),
-        "subtitle_color": (160, 160, 175),
-        "time_color": (255, 200, 50),
-        "chart": {"width": 1600, "height": 750, "x_pos": 80, "y_pos": 200},
+        "figsize":           (16.0, 9.0),    # 1920×1080 @ 120 dpi
+        "dpi":               120,
+        "period_label_size": 28,
+        "bar_label_size":    9,
+        "tick_label_size":   9,
+        "title_size":        13,
     },
 }
 
+# ── Correspondance time_format → strftime ────────────────────────────────────
+_TIME_FMT = {"year": "%Y", "month": "%b %Y", "day": "%d %b %Y"}
 
-# ── Chargement de la config ───────────────────────────────────────────────────
+
+# ─── Chargement config ────────────────────────────────────────────────────────
 
 def load_config(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-# ── Préparation des données ───────────────────────────────────────────────────
+# ─── Préparation des données ──────────────────────────────────────────────────
 
-def prepare_data(config: dict) -> str:
+def prepare_data(config: dict) -> pd.DataFrame:
     """
-    Télécharge logos + données selon la source configurée.
-    Retourne le chemin vers le fichier Excel prêt à l'emploi.
+    Télécharge logos + données selon la source.
+    Retourne un DataFrame prêt pour bar_chart_race :
+    index = DatetimeIndex, colonnes = participants.
     """
     source = config["source"]
     source_type = source["type"]
     os.makedirs("data", exist_ok=True)
 
-    if source_type == "crypto":
-        from sources.fetchers import fetch_crypto
-        from sources.logos import download_crypto_logos
+    if source_type in ("crypto", "stocks"):
+        from sources.fetchers import fetch_yfinance
+        from sources.logos import download_logos_yfinance
 
         tickers = source["tickers"]
-        download_crypto_logos(tickers)          # Auto-télécharge les logos
-
-        data_file = source.get("file", "data/data.xlsx")
-        df = fetch_crypto(
+        download_logos_yfinance(tickers, source_type)
+        df = fetch_yfinance(
             tickers=tickers,
             start=source.get("start", "2018-01-01"),
             end=source.get("end"),
             interval=source.get("interval", "1wk"),
         )
-        df.to_excel(data_file)
-        print(f"Données → {data_file}")
-        return data_file
 
     elif source_type == "world_bank":
         from sources.fetchers import fetch_world_bank
         from sources.logos import download_country_flags
 
         countries = source["countries"]
-        download_country_flags(countries)       # Auto-télécharge les drapeaux
-
-        data_file = source.get("file", "data/data.xlsx")
+        download_country_flags(countries)
         df = fetch_world_bank(
             indicator=source["indicator"],
             countries=countries,
@@ -119,133 +118,159 @@ def prepare_data(config: dict) -> str:
             end_year=source.get("end_year"),
             scale=float(source.get("scale", 1.0)),
         )
-        df.to_excel(data_file)
-        print(f"Données → {data_file}")
-        return data_file
 
     elif source_type == "manual":
         from sources.fetchers import load_manual
 
-        data_file = source["file"]
-        load_manual(data_file)
-        return data_file
+        load_manual(source["file"])
+        df = pd.read_excel(source["file"], index_col=0)
+        df.index = pd.to_datetime(df.index)
 
     else:
         sys.exit(
             f"Type de source inconnu : {source_type!r}\n"
-            "Valeurs acceptées : crypto, world_bank, manual"
+            "Valeurs : crypto, stocks, world_bank, manual"
         )
 
+    # ── Normalisation (performance relative, toutes les séries → base 100) ───
+    display_cfg = config.get("display", {})
+    if display_cfg.get("normalize"):
+        for col in df.columns:
+            first = df[col][df[col] > 0]
+            if not first.empty:
+                df[col] = (df[col] / first.iloc[0]) * 100
+        print("Normalisation : toutes les séries démarrent à 100.")
 
-# ── Construction et rendu de la vidéo ────────────────────────────────────────
+    return df
 
-def build_video(config: dict, data_file: str, preview: bool = False) -> None:
-    """Assemble le canvas et rend la vidéo."""
-    # Imports ici : tkinter est chargé à ce moment (après Xvfb si --headless)
-    from sjvisualizer.BarRace import bar_race
-    from sjvisualizer.Canvas import canvas
-    from sjvisualizer.DataHandler import DataHandler
+
+# ─── Construction de la palette de couleurs ───────────────────────────────────
+
+def _build_cmap(df: pd.DataFrame, config_colors: dict) -> list:
+    """Renvoie une liste de couleurs dans l'ordre des colonnes du DataFrame."""
+    palette = iter(_DEFAULT_PALETTE)
+    result = []
+    for col in df.columns:
+        if col in config_colors:
+            r, g, b = config_colors[col]
+            result.append(f'#{int(r):02x}{int(g):02x}{int(b):02x}')
+        else:
+            result.append(next(palette, '#888888'))
+    return result
+
+
+# ─── Rendu vidéo ──────────────────────────────────────────────────────────────
+
+def build_video(config: dict, df: pd.DataFrame, preview: bool = False) -> None:
+    """Génère la vidéo via bar_chart_race (headless, matplotlib Agg)."""
+    import bar_chart_race as bcr
 
     fmt_name = config.get("format", "tiktok")
     if fmt_name not in FORMATS:
-        sys.exit(f"Format inconnu : {fmt_name!r}\nValeurs acceptées : {list(FORMATS)}")
+        sys.exit(f"Format inconnu : {fmt_name!r}\nValeurs : {list(FORMATS)}")
 
     fmt = FORMATS[fmt_name]
     display_cfg = config.get("display", {})
     output_cfg = config.get("output", {})
 
-    width, height = fmt["width"], fmt["height"]
-    fps = output_cfg.get("fps", 30)
-    duration = output_cfg.get("duration", 60)       # 60 secondes par défaut
-    num_frames = int(duration * fps)
+    # ── Durée cible → period_length calculé automatiquement ──────────────────
+    duration = output_cfg.get("duration", 60)
+    n_periods = len(df)
+    period_ms = max(80, int((duration * 1000) / n_periods))
+    steps = display_cfg.get("steps_per_period", 15)
 
-    # Couleurs personnalisées par participant (liste RGB dans le YAML → tuple)
-    custom_colors: dict = {
-        name: tuple(rgb)
-        for name, rgb in config.get("colors", {}).items()
-    }
+    # ── Palette ───────────────────────────────────────────────────────────────
+    config_colors = {name: rgb for name, rgb in config.get("colors", {}).items()}
+    cmap_list = _build_cmap(df, config_colors)
 
-    # ── Interpolation des données ─────────────────────────────────────────────
-    print(f"Interpolation ({num_frames} frames = {duration}s × {fps} FPS)...")
-    dh = DataHandler(excel_file=data_file, number_of_frames=num_frames)
-    df = dh.df
+    # ── Titre (+ sous-titre sur une 2e ligne) ─────────────────────────────────
+    title = config.get("title", "")
+    subtitle = config.get("subtitle", "")
+    full_title = f"{title}\n{subtitle}" if subtitle else title
 
-    # ── Canvas ───────────────────────────────────────────────────────────────
-    cv = canvas(
-        width=width,
-        height=height,
-        bg=tuple(fmt["bg"]),
-        include_logo=False,
+    # ── Format de date ────────────────────────────────────────────────────────
+    period_fmt = _TIME_FMT.get(display_cfg.get("time_format", "month"), "%b %Y")
+
+    # ── Thème sombre ──────────────────────────────────────────────────────────
+    plt.rcParams.update(_DARK_THEME)
+
+    # ── Paramètres communs bar_chart_race ─────────────────────────────────────
+    bcr_kwargs = dict(
+        orientation='h',
+        sort='desc',
+        n_bars=display_cfg.get("bars", 10),
+        cmap=cmap_list,
+        title=full_title,
+        title_size=fmt["title_size"],
+        bar_label_size=fmt["bar_label_size"],
+        tick_label_size=fmt["tick_label_size"],
+        shared_fontdict={"color": "white", "weight": "bold"},
+        period_label={
+            "x": 0.97, "y": 0.07,
+            "ha": "right", "va": "center",
+            "color": "#FFD700", "weight": "bold",
+            "size": fmt["period_label_size"],
+        },
+        period_fmt=period_fmt,
+        bar_kwargs={"alpha": 0.88, "edgecolor": "none"},
+        steps_per_period=steps,
+        filter_column_colors=True,
     )
 
-    # ── Titres ───────────────────────────────────────────────────────────────
-    if config.get("title"):
-        cv.add_title(config["title"], color=tuple(fmt["text_color"]))
-    if config.get("subtitle"):
-        cv.add_sub_title(config["subtitle"], color=tuple(fmt["subtitle_color"]))
-
-    # ── Graphique Bar Race ────────────────────────────────────────────────────
-    # Les logos sont cherchés automatiquement dans assets/{nom}.png
-    chart_cfg = fmt["chart"]
-    chart = bar_race(
-        canvas=cv,
-        df=df,
-        width=chart_cfg["width"],
-        height=chart_cfg["height"],
-        x_pos=chart_cfg["x_pos"],
-        y_pos=chart_cfg["y_pos"],
-        number_of_bars=display_cfg.get("bars", 10),
-        font_color=tuple(fmt["text_color"]),
-        font_size=display_cfg.get("font_size", 26),
-        unit=display_cfg.get("unit", ""),
-        colors=custom_colors,                       # Couleurs de marque
-        back_ground_color=tuple(fmt["bg"]),         # Fond identique au canvas
-    )
-    cv.add_sub_plot(chart)
-
-    # ── Indicateur de date ────────────────────────────────────────────────────
-    cv.add_time(
-        df,
-        time_indicator=display_cfg.get("time_format", "month"),
-        color=tuple(fmt["time_color"]),
-    )
-
-    # ── Rendu ─────────────────────────────────────────────────────────────────
     if preview:
-        print("Prévisualisation — appuie sur Ctrl+C pour quitter.")
-        cv.play(fps=fps, record=False)
+        # ── Aperçu rapide : premières 15 périodes, basse résolution ──────────
+        out_file = "/tmp/preview_race.mp4"
+        df_preview = df.iloc[:min(15, len(df))]
+        print(f"Aperçu rapide → {out_file}")
+        bcr.bar_chart_race(
+            df=df_preview,
+            filename=out_file,
+            figsize=(fmt["figsize"][0] * 0.55, fmt["figsize"][1] * 0.55),
+            dpi=72,
+            period_length=250,
+            steps_per_period=5,
+            **{k: v for k, v in bcr_kwargs.items()
+               if k not in ('steps_per_period',)},
+        )
+        print(f"Aperçu sauvegardé → {out_file}")
     else:
+        # ── Rendu final ───────────────────────────────────────────────────────
         os.makedirs("output", exist_ok=True)
         out_file = output_cfg.get("file", "output/video.mp4")
-        print(f"Génération → {out_file}")
-        cv.play(fps=fps, record=True, width=width, height=height, file_name=out_file)
+        print(
+            f"Rendu ({n_periods} périodes × {period_ms}ms = ~{duration}s, "
+            f"{steps} frames/période) → {out_file}"
+        )
+        bcr.bar_chart_race(
+            df=df,
+            filename=out_file,
+            figsize=fmt["figsize"],
+            dpi=fmt["dpi"],
+            period_length=period_ms,
+            **bcr_kwargs,
+        )
         print(f"\nVidéo sauvegardée → {out_file}")
 
 
-# ── Point d'entrée ────────────────────────────────────────────────────────────
+# ─── Point d'entrée ───────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Génère une vidéo Bar Chart Race à partir d'un fichier de config YAML.",
+        description="Génère une vidéo Bar Chart Race — 100% headless, sans fenêtre.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 exemples :
-  python generate.py configs/crypto_tiktok.yaml
-  python generate.py configs/crypto_tiktok.yaml --headless
-  python generate.py configs/pays_armement_tiktok.yaml --headless
+  python generate.py configs/crypto_performance_tiktok.yaml
+  python generate.py configs/pays_armement_tiktok.yaml
+  python generate.py configs/tech_actions_tiktok.yaml
   python generate.py configs/crypto_tiktok.yaml --preview
 """,
     )
     parser.add_argument("config", help="Fichier de config YAML")
     parser.add_argument(
-        "--headless",
-        action="store_true",
-        help="Enregistre sans afficher la fenêtre (requiert xvfb : sudo apt install xvfb)",
-    )
-    parser.add_argument(
         "--preview",
         action="store_true",
-        help="Ouvre une fenêtre de prévisualisation sans enregistrer",
+        help="Génère un aperçu rapide basse qualité (15 premières périodes)",
     )
     args = parser.parse_args()
 
@@ -253,8 +278,8 @@ exemples :
         sys.exit(f"Config introuvable : {args.config}")
 
     config = load_config(args.config)
-    data_file = prepare_data(config)
-    build_video(config, data_file, preview=args.preview)
+    df = prepare_data(config)
+    build_video(config, df, preview=args.preview)
 
 
 if __name__ == "__main__":

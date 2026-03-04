@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Course à la Population — Format TikTok
-# Usage : python generate.py configs/pays_population_tiktok.yaml --headless
+# Usage : python generate.py configs/pays_population_tiktok.yaml
 # ─────────────────────────────────────────────────────────────────────────────
 
 title: "Course à la Population"
@@ -10,9 +10,9 @@ format: tiktok
 
 source:
   type: world_bank
-  indicator: SP.POP.TOTL       # Population totale
+  indicator: SP.POP.TOTL
   start_year: 2000
-  scale: 1.0e9                 # → milliards d'habitants
+  scale: 1.0e9
 
   countries:
     CHN: Chine
@@ -27,32 +27,24 @@ source:
     ETH: Éthiopie
     MEX: Mexique
     JPN: Japon
-    DEU: Allemagne
-    GBR: Royaume-Uni
-    FRA: France
 
 colors:
-  Chine:        [222,  41,  16]
-  Inde:         [255, 153,  51]
-  États-Unis:   [178,  34,  52]
-  Indonésie:    [220,  20,  60]
-  Pakistan:     [ 30, 130,  76]
-  Brésil:       [  0, 156,  59]
-  Nigeria:      [ 34, 139,  34]
-  Bangladesh:   [ 34, 139,  34]
-  Russie:       [  0,  57, 166]
-  Éthiopie:     [ 0, 144,  60]
-  Mexique:      [  0, 104,  71]
-  Japon:        [200,   0,  40]
-  Allemagne:    [100, 100, 100]
-  Royaume-Uni:  [  0,  36, 125]
-  France:       [  0,  35, 149]
+  Chine:       [222,  41,  16]
+  Inde:        [255, 153,  51]
+  États-Unis:  [178,  34,  52]
+  Indonésie:   [220,  20,  60]
+  Pakistan:    [ 30, 130,  76]
+  Brésil:      [  0, 156,  59]
+  Nigeria:     [ 34, 139,  34]
+  Bangladesh:  [ 34, 100,  80]
+  Russie:      [  0,  57, 166]
+  Éthiopie:    [  0, 144,  60]
+  Mexique:     [  0, 104,  71]
+  Japon:       [200,   0,  40]
 
 display:
   bars: 10
-  font_size: 26
   time_format: year
-  unit: " Md"
 
 output:
   file: "output/pays_population_tiktok.mp4"

@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course PERFORMANCE crypto — Format TikTok
+# Usage : python generate.py configs/crypto_performance_tiktok.yaml
+#
+# Toutes les cryptos partent de 100 (= leur prix au départ).
+# On voit QUI A LE PLUS GRANDI, pas qui vaut le plus.
+# → Dogecoin à +30 000 % dépasse Bitcoin à +1 000 % = course BEAUCOUP plus serrée !
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Crypto Battle · Performance"
+subtitle: "Qui a le plus grandi depuis 2020 ? (base 100)"
+
+format: tiktok
+
+source:
+  type: crypto
+  start: "2020-01-01"       # Démarre au début du grand bull run
+  interval: "1wk"
+
+  tickers:
+    BTC-USD:  Bitcoin
+    ETH-USD:  Ethereum
+    DOGE-USD: Dogecoin
+    BNB-USD:  Binance
+    SOL-USD:  Solana
+    XRP-USD:  Ripple
+    ADA-USD:  Cardano
+    AVAX-USD: Avalanche
+
+colors:
+  Bitcoin:   [247, 147,  26]
+  Ethereum:  [ 98, 126, 234]
+  Dogecoin:  [195, 175,   0]
+  Binance:   [240, 185,  11]
+  Solana:    [153,  69, 255]
+  Ripple:    [  0, 170, 228]
+  Cardano:   [  0,  51, 173]
+  Avalanche: [232,  65,  66]
+
+display:
+  bars: 8
+  font_size: 28
+  time_format: month
+  normalize: true           # Toutes les séries démarrent à 100
+
+output:
+  file: "output/crypto_performance_tiktok.mp4"
+  fps: 30
+  duration: 60

@@ -1,8 +1,9 @@
 """
 Téléchargement automatique des logos/drapeaux dans le dossier assets/.
 
-- Logos crypto  : CoinGecko (gratuit, sans clé API)
-- Drapeaux pays : flagcdn.com (gratuit, sans clé API)
+  - Logos crypto  : CoinGecko API (gratuit, sans clé)
+  - Logos actions : Clearbit Logo API (gratuit, sans clé)
+  - Drapeaux pays : flagcdn.com (gratuit, sans clé)
 """
 from __future__ import annotations
 
@@ -13,10 +14,10 @@ import requests
 from PIL import Image
 
 ASSETS_DIR = "assets"
-LOGO_SIZE = (130, 130)      # Taille cible pour les logos (pixels)
-FLAG_SIZE = (130, 87)       # Taille cible pour les drapeaux (ratio 3:2)
+LOGO_SIZE = (130, 130)
+FLAG_SIZE = (130, 87)    # Ratio 3:2 pour les drapeaux
 
-# ─── Correspondances ticker → ID CoinGecko ───────────────────────────────────
+# ── CoinGecko : ticker Yahoo → ID CoinGecko ──────────────────────────────────
 COINGECKO_IDS: dict[str, str] = {
     "BTC-USD":   "bitcoin",
     "ETH-USD":   "ethereum",
@@ -35,12 +36,33 @@ COINGECKO_IDS: dict[str, str] = {
     "SHIB-USD":  "shiba-inu",
     "TRX-USD":   "tron",
     "NEAR-USD":  "near",
-    "APT-USD":   "aptos",
-    "ARB-USD":   "arbitrum",
-    "OP-USD":    "optimism",
 }
 
-# ─── Correspondances ISO 3166-1 alpha-3 → alpha-2 (pour flagcdn.com) ─────────
+# ── Clearbit : ticker Yahoo → domaine web ────────────────────────────────────
+COMPANY_DOMAINS: dict[str, str] = {
+    "AAPL":  "apple.com",
+    "MSFT":  "microsoft.com",
+    "NVDA":  "nvidia.com",
+    "GOOGL": "google.com",
+    "GOOG":  "google.com",
+    "AMZN":  "amazon.com",
+    "META":  "meta.com",
+    "TSLA":  "tesla.com",
+    "NFLX":  "netflix.com",
+    "AMD":   "amd.com",
+    "INTC":  "intel.com",
+    "ORCL":  "oracle.com",
+    "SHOP":  "shopify.com",
+    "UBER":  "uber.com",
+    "SNAP":  "snap.com",
+    "SPOT":  "spotify.com",
+    "CRM":   "salesforce.com",
+    "PYPL":  "paypal.com",
+    "SQ":    "squareup.com",
+    "COIN":  "coinbase.com",
+}
+
+# ── ISO 3166-1 alpha-3 → alpha-2 (flagcdn.com) ───────────────────────────────
 ISO3_TO_ISO2: dict[str, str] = {
     "USA": "us", "CHN": "cn", "RUS": "ru", "DEU": "de",
     "GBR": "gb", "FRA": "fr", "IND": "in", "JPN": "jp",
@@ -49,25 +71,22 @@ ISO3_TO_ISO2: dict[str, str] = {
     "ESP": "es", "NLD": "nl", "POL": "pl", "UKR": "ua",
     "MEX": "mx", "IDN": "id", "NGA": "ng", "ZAF": "za",
     "ARG": "ar", "PAK": "pk", "EGY": "eg", "IRN": "ir",
-    "IRQ": "iq", "SYR": "sy", "YEM": "ye", "AFG": "af",
-    "SWE": "se", "NOR": "no", "CHE": "ch", "BEL": "be",
-    "GRC": "gr", "PRT": "pt", "FIN": "fi", "DNK": "dk",
-    "CZE": "cz", "HUN": "hu", "ROU": "ro", "AUT": "at",
-    "SGP": "sg", "MYS": "my", "THA": "th", "VNM": "vn",
-    "PHL": "ph", "BGD": "bd", "ETH": "et", "TZA": "tz",
+    "IRQ": "iq", "SWE": "se", "NOR": "no", "CHE": "ch",
+    "BEL": "be", "GRC": "gr", "PRT": "pt", "FIN": "fi",
+    "DNK": "dk", "CZE": "cz", "HUN": "hu", "ROU": "ro",
+    "AUT": "at", "SGP": "sg", "MYS": "my", "THA": "th",
+    "VNM": "vn", "PHL": "ph", "BGD": "bd", "ETH": "et",
     "KEN": "ke", "GHA": "gh", "DZA": "dz", "MAR": "ma",
-    "KAZ": "kz", "UZB": "uz", "CHL": "cl", "COL": "co",
-    "PER": "pe", "VEN": "ve", "PRK": "kp", "TWN": "tw",
-    "MMR": "mm", "SDN": "sd", "AGO": "ao", "MOZ": "mz",
+    "KAZ": "kz", "CHL": "cl", "COL": "co", "PER": "pe",
+    "PRK": "kp", "TWN": "tw", "MMR": "mm", "SDN": "sd",
 }
 
 
 def _fetch_and_save(url: str, name: str, size: tuple[int, int]) -> bool:
-    """Télécharge une image, la redimensionne et la sauvegarde dans assets/."""
+    """Télécharge, redimensionne et sauvegarde dans assets/{name}.png."""
     path = os.path.join(ASSETS_DIR, f"{name}.png")
     if os.path.exists(path):
-        return True     # Déjà présent, rien à faire
-
+        return True
     try:
         resp = requests.get(url, timeout=15)
         resp.raise_for_status()
@@ -81,11 +100,11 @@ def _fetch_and_save(url: str, name: str, size: tuple[int, int]) -> bool:
         return False
 
 
-def download_crypto_logos(tickers: dict) -> None:
+def download_logos_yfinance(tickers: dict, source_type: str = "crypto") -> None:
     """
-    Télécharge les logos crypto depuis l'API CoinGecko (gratuite, sans clé).
-
-    :param tickers: dict {ticker_yahoo: nom_affichage}, ex. {"BTC-USD": "Bitcoin"}
+    Télécharge les logos pour les tickers Yahoo Finance.
+    - source_type='crypto' → CoinGecko
+    - source_type='stocks' → Clearbit
     """
     os.makedirs(ASSETS_DIR, exist_ok=True)
     needed = [
@@ -96,31 +115,36 @@ def download_crypto_logos(tickers: dict) -> None:
     if not needed:
         return
 
-    print("Téléchargement des logos crypto (CoinGecko)...")
-    for ticker, name in needed:
-        coin_id = COINGECKO_IDS.get(ticker)
-        if not coin_id:
-            print(f"  ✗ {ticker} : ID CoinGecko inconnu — placez manuellement assets/{name}.png")
-            continue
-        try:
-            api_resp = requests.get(
-                f"https://api.coingecko.com/api/v3/coins/{coin_id}",
-                timeout=15,
-                headers={"Accept": "application/json"},
-            )
-            api_resp.raise_for_status()
-            img_url = api_resp.json()["image"]["large"]
-            _fetch_and_save(img_url, name, LOGO_SIZE)
-        except Exception as exc:
-            print(f"  ✗ {name} : {exc}")
+    if source_type == "stocks":
+        print("Téléchargement des logos (Clearbit)...")
+        for ticker, name in needed:
+            domain = COMPANY_DOMAINS.get(ticker.upper())
+            if not domain:
+                print(f"  ✗ {ticker} : domaine inconnu — placez assets/{name}.png manuellement")
+                continue
+            _fetch_and_save(f"https://logo.clearbit.com/{domain}", name, LOGO_SIZE)
+    else:
+        print("Téléchargement des logos crypto (CoinGecko)...")
+        for ticker, name in needed:
+            coin_id = COINGECKO_IDS.get(ticker)
+            if not coin_id:
+                print(f"  ✗ {ticker} : ID CoinGecko inconnu — placez assets/{name}.png manuellement")
+                continue
+            try:
+                api = requests.get(
+                    f"https://api.coingecko.com/api/v3/coins/{coin_id}",
+                    timeout=15,
+                    headers={"Accept": "application/json"},
+                )
+                api.raise_for_status()
+                img_url = api.json()["image"]["large"]
+                _fetch_and_save(img_url, name, LOGO_SIZE)
+            except Exception as exc:
+                print(f"  ✗ {name} : {exc}")
 
 
 def download_country_flags(countries: dict) -> None:
-    """
-    Télécharge les drapeaux depuis flagcdn.com (gratuit, sans clé).
-
-    :param countries: dict {code_iso3: nom_affichage}, ex. {"USA": "États-Unis"}
-    """
+    """Télécharge les drapeaux depuis flagcdn.com."""
     os.makedirs(ASSETS_DIR, exist_ok=True)
     needed = [
         (iso3, name)
@@ -134,6 +158,6 @@ def download_country_flags(countries: dict) -> None:
     for iso3, name in needed:
         iso2 = ISO3_TO_ISO2.get(iso3.upper())
         if not iso2:
-            print(f"  ✗ {iso3} : code ISO2 inconnu — placez manuellement assets/{name}.png")
+            print(f"  ✗ {iso3} : code ISO2 inconnu — placez assets/{name}.png manuellement")
             continue
         _fetch_and_save(f"https://flagcdn.com/w160/{iso2}.png", name, FLAG_SIZE)
