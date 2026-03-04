@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Course Crypto — Format YouTube (16:9)
+# Usage : python generate.py configs/crypto_youtube.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: "Crypto Battle 2018–2025"
+subtitle: "Évolution des prix de clôture en USD"
+
+format: youtube
+
+# ── Source des données ───────────────────────────────────────────────────────
+source:
+  type: crypto
+  start: "2018-01-01"
+  interval: "1wk"
+
+  tickers:
+    BTC-USD:  Bitcoin
+    ETH-USD:  Ethereum
+    DOGE-USD: Dogecoin
+    BNB-USD:  Binance
+    SOL-USD:  Solana
+    XRP-USD:  Ripple
+
+# ── Affichage ────────────────────────────────────────────────────────────────
+display:
+  bars: 6
+  font_size: 22
+  time_format: month
+  unit: "$"
+
+# ── Sortie vidéo ─────────────────────────────────────────────────────────────
+output:
+  file: "output/crypto_youtube.mp4"
+  fps: 30
+  duration: 90
