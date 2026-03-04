@@ -1,9 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Course à l'Armement — Format TikTok
-# Usage : python generate.py configs/pays_armement_tiktok.yaml --headless
+# Usage : python generate.py configs/pays_armement_tiktok.yaml
 #
-# Données : World Bank (MS.MIL.XPND.CD), annuelles, en milliards de dollars.
-# Logos   : drapeaux téléchargés automatiquement depuis flagcdn.com.
+# La montée en puissance de la Chine de 2000 à 2024 est spectaculaire.
+# La Russie grimpe soudainement après 2014 (Crimée) puis 2022 (Ukraine).
+# Course géopolitique vraiment captivante !
 # ─────────────────────────────────────────────────────────────────────────────
 
 title: "Course à l'Armement"
@@ -11,12 +12,11 @@ subtitle: "Dépenses militaires en Md$ · 2000 → 2024"
 
 format: tiktok
 
-# ── Source des données ───────────────────────────────────────────────────────
 source:
   type: world_bank
-  indicator: MS.MIL.XPND.CD   # Dépenses militaires (USD courant)
+  indicator: MS.MIL.XPND.CD
   start_year: 2000
-  scale: 1.0e9                 # Divise par 1 milliard → valeurs en Md$
+  scale: 1.0e9                 # USD → milliards de dollars
 
   countries:
     USA: États-Unis
@@ -35,13 +35,12 @@ source:
     UKR: Ukraine
     POL: Pologne
 
-# ── Couleurs ─────────────────────────────────────────────────────────────────
 colors:
   États-Unis:       [178,  34,  52]
   Chine:            [222,  41,  16]
   Russie:           [  0,  57, 166]
   Royaume-Uni:      [  0,  36, 125]
-  Allemagne:        [100, 100, 100]
+  Allemagne:        [110, 110, 110]
   Arabie Saoudite:  [ 96, 171,  89]
   Inde:             [255, 153,  51]
   France:           [  0,  85, 164]
@@ -53,14 +52,10 @@ colors:
   Ukraine:          [  0,  87, 183]
   Pologne:          [220,  20,  60]
 
-# ── Affichage ────────────────────────────────────────────────────────────────
 display:
   bars: 10
-  font_size: 26
   time_format: year
-  unit: " Md$"
 
-# ── Sortie vidéo ─────────────────────────────────────────────────────────────
 output:
   file: "output/pays_armement_tiktok.mp4"
   fps: 30

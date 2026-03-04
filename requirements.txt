@@ -1,9 +1,10 @@
-sjvisualizer>=0.0.15
+bar_chart_race>=0.1.0
+imageio-ffmpeg>=0.4.9
+matplotlib>=3.8.0
 yfinance>=0.2.0
 pandas>=2.0.0
 openpyxl>=3.1.0
 PyYAML>=6.0
 Pillow>=10.0.0
-opencv-python>=4.8.0
 numpy>=1.24.0
 requests>=2.31.0
